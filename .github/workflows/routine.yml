@@ -47,7 +47,7 @@ jobs:
         uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
         with:
           repository: ${{ vars.JR_REPOSITORY }}
-          ref: main
+          ref: ${{ vars.JR_REF || 'main' }}
           ssh-key: ${{ secrets.JR_READ_SSH_KEY }}
           persist-credentials: false
           fetch-depth: 1
@@ -66,6 +66,7 @@ jobs:
         env:
           JR_CHECKOUT: ${{ github.workspace }}/input
           JRC_GITHUB_REPOSITORY: ${{ vars.JR_REPOSITORY }}
+          JRC_GITHUB_BRANCH: ${{ vars.JR_REF || 'main' }}
         run: |
           if bash application/scripts/github_job.sh preflight > "$RUNNER_TEMP/private-job.log" 2>&1; then
             echo 'Foundation checks and input access verified. No browser started.'
@@ -80,6 +81,7 @@ jobs:
           JR_CHECKOUT: ${{ github.workspace }}/input
           JRC_DATA_DIR: ${{ runner.temp }}/private-state
           JRC_GITHUB_REPOSITORY: ${{ vars.JR_REPOSITORY }}
+          JRC_GITHUB_BRANCH: ${{ vars.JR_REF || 'main' }}
           JRC_STATE_REPOSITORY: ${{ vars.STATE_REPOSITORY }}
           JRC_STATE_TOKEN: ${{ secrets.STATE_TOKEN }}
           JRC_STATE_KEY: ${{ secrets.STATE_KEY }}

@@ -14,7 +14,8 @@ are configured. Scheduling will be added after manual verification; there is no 
 Required repository configuration:
 
 - Variables: `CODE_REPOSITORY`, `CODE_REF` (approved full commit SHA), `JR_REPOSITORY`,
-  `STATE_REPOSITORY`, `SYNC_ENABLED` (initially `false`).
+  `STATE_REPOSITORY`, `SYNC_ENABLED` (initially `false`). Optional `JR_REF` selects an
+  operator-approved input revision; it defaults to `main` and is not a dispatch input.
 - Secrets: `CODE_READ_SSH_KEY`, `JR_READ_SSH_KEY`, and, for synchronization,
   `STATE_TOKEN`, `STATE_KEY`.
 
