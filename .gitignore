@@ -1,0 +1,11 @@
+.env*
+*.key
+*.pem
+private/
+data/
+captures/
+sessions/
+reports/
+*.sqlite*
+*.db*
+*.log

@@ -1,0 +1,93 @@
+name: Routine
+
+on:
+  workflow_dispatch:
+    inputs:
+      task:
+        description: Foundation task (no browser or submission)
+        type: choice
+        options: [preflight, sync]
+        default: preflight
+        required: true
+
+permissions:
+  contents: read
+
+concurrency:
+  group: candidature-runtime
+  cancel-in-progress: false
+
+jobs:
+  execute:
+    if: inputs.task == 'preflight' || vars.SYNC_ENABLED == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Validate configuration
+        env:
+          CODE_REF: ${{ vars.CODE_REF }}
+          CODE_REPOSITORY: ${{ vars.CODE_REPOSITORY }}
+          JR_REPOSITORY: ${{ vars.JR_REPOSITORY }}
+        run: |
+          [[ "$CODE_REF" =~ ^[a-f0-9]{40}$ ]] || exit 1
+          [[ "$CODE_REPOSITORY" =~ ^[a-zA-Z0-9_.-]+/[a-zA-Z0-9_.-]+$ ]] || exit 1
+          [[ "$JR_REPOSITORY" =~ ^[a-zA-Z0-9_.-]+/[a-zA-Z0-9_.-]+$ ]] || exit 1
+
+      - name: Load application
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          repository: ${{ vars.CODE_REPOSITORY }}
+          ref: ${{ vars.CODE_REF }}
+          ssh-key: ${{ secrets.CODE_READ_SSH_KEY }}
+          persist-credentials: false
+          fetch-depth: 1
+          path: application
+
+      - name: Load input
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          repository: ${{ vars.JR_REPOSITORY }}
+          ref: main
+          ssh-key: ${{ secrets.JR_READ_SSH_KEY }}
+          persist-credentials: false
+          fetch-depth: 1
+          path: input
+          sparse-checkout: data/notifications
+          sparse-checkout-cone-mode: true
+
+      - name: Runtime
+        uses: astral-sh/setup-uv@d0d8abe699bfb85fec6de9f7adb5ae17292296ff # v6
+        with:
+          version: '0.8.15'
+          enable-cache: false
+
+      - name: Verify foundation
+        if: inputs.task == 'preflight'
+        env:
+          JR_CHECKOUT: ${{ github.workspace }}/input
+          JRC_GITHUB_REPOSITORY: ${{ vars.JR_REPOSITORY }}
+        run: |
+          if bash application/scripts/github_job.sh preflight > "$RUNNER_TEMP/private-job.log" 2>&1; then
+            echo 'Foundation checks and input access verified. No browser started.'
+          else
+            echo 'Foundation verification failed. Detailed output is private.'
+            exit 1
+          fi
+
+      - name: Synchronize foundation
+        if: inputs.task == 'sync'
+        env:
+          JR_CHECKOUT: ${{ github.workspace }}/input
+          JRC_DATA_DIR: ${{ runner.temp }}/private-state
+          JRC_GITHUB_REPOSITORY: ${{ vars.JR_REPOSITORY }}
+          JRC_STATE_REPOSITORY: ${{ vars.STATE_REPOSITORY }}
+          JRC_STATE_TOKEN: ${{ secrets.STATE_TOKEN }}
+          JRC_STATE_KEY: ${{ secrets.STATE_KEY }}
+          JRC_MODE: inspection
+        run: |
+          if bash application/scripts/github_job.sh sync > "$RUNNER_TEMP/private-job.log" 2>&1; then
+            echo 'Private state synchronized. No browser or submission enabled.'
+          else
+            echo 'Private synchronization failed. Detailed output is private.'
+            exit 1
+          fi
