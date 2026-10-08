@@ -4,9 +4,9 @@ on:
   workflow_dispatch:
     inputs:
       task:
-        description: Foundation task (no browser or submission)
+        description: State maintenance (no browser or submission)
         type: choice
-        options: [preflight, sync]
+        options: [preflight, sync, transfer, state-check]
         default: preflight
         required: true
 
@@ -19,7 +19,7 @@ concurrency:
 
 jobs:
   execute:
-    if: inputs.task == 'preflight' || vars.SYNC_ENABLED == 'true'
+    if: inputs.task != 'sync' || vars.SYNC_ENABLED == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
@@ -44,6 +44,7 @@ jobs:
           path: application
 
       - name: Load input
+        if: inputs.task == 'preflight' || inputs.task == 'sync'
         uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
         with:
           repository: ${{ vars.JR_REPOSITORY }}
@@ -91,5 +92,23 @@ jobs:
             echo 'Private state synchronized. No browser or submission enabled.'
           else
             echo 'Private synchronization failed. Detailed output is private.'
+            exit 1
+          fi
+
+      - name: Maintain private state
+        if: inputs.task == 'transfer' || inputs.task == 'state-check'
+        env:
+          MAINTENANCE_TASK: ${{ inputs.task }}
+          HANDOFF_ASSET: ${{ vars.HANDOFF_ASSET }}
+          JRC_DATA_DIR: ${{ runner.temp }}/private-state
+          JRC_STATE_REPOSITORY: ${{ vars.STATE_REPOSITORY }}
+          JRC_STATE_TOKEN: ${{ secrets.STATE_TOKEN }}
+          JRC_STATE_KEY: ${{ secrets.STATE_KEY }}
+          JRC_MODE: inspection
+        run: |
+          if bash application/scripts/github_job.sh "$MAINTENANCE_TASK" > "$RUNNER_TEMP/private-job.log" 2>&1; then
+            echo 'Private state maintenance verified. Campaign paused; no browser or submission.'
+          else
+            echo 'Private state maintenance failed. Detailed output is private.'
             exit 1
           fi
