@@ -9,6 +9,7 @@ Manual tasks:
 - `transfer`: promote an encrypted staged handoff under the active run's lock, preserving the
   existing remote campaign control and feed history. Only an idle paused campaign is supported.
 - `state-check`: restore and verify that idle paused state on a fresh runner, then checkpoint it.
+- `update`: apply an encrypted, versioned human profile/answer update under the live run's lock.
 
 These tasks do not run a browser or call a model and cannot submit applications.
 Synchronization is disabled unless `SYNC_ENABLED` is set to `true` and private storage credentials
@@ -21,6 +22,7 @@ Required repository configuration:
   operator-approved input revision; it defaults to `main` and is not a dispatch input.
   `HANDOFF_ASSET` identifies an opaque encrypted asset in private storage for `transfer`;
   it contains no candidate data and is not a dispatch input.
+  `UPDATE_ASSET` similarly identifies an encrypted private human update for `update`.
 - Secrets: `CODE_READ_SSH_KEY`, `JR_READ_SSH_KEY`, and, for synchronization,
   `STATE_TOKEN`, `STATE_KEY`.
 
@@ -31,6 +33,10 @@ State maintenance requires approved private code supporting schema 4. The handof
 the local ledger first; downloaded copies remain readonly, and only the live GitHub lock
 owner can reserve budget or change runtime data. Never bootstrap an existing state again.
 Maintenance does not read the JR repository and receives no model API key.
+Updates require approved private code supporting `ProfileUpdate`; they do not resume the
+campaign. Requests carry the exact ledger/handoff/runtime identity and expected profile version.
+Replay receipts and profile changes commit together before the remote checkpoint is published.
+No Gmail credential is required or passed to any of these tasks.
 
 Public logs contain generic success/failure messages. Detailed process output is captured
 temporarily on the runner and is not uploaded as a public artifact. No profile, CV, session,
