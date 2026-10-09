@@ -6,7 +6,7 @@ on:
       task:
         description: State and access checks (no browser or submission)
         type: choice
-        options: [preflight, sync, transfer, state-check, update, mail-check]
+        options: [preflight, sync, transfer, state-check, update, mail-check, account-update]
         default: preflight
         required: true
 
@@ -139,5 +139,22 @@ jobs:
             echo 'Readonly mail access verified. No message content read.'
           else
             echo 'Readonly mail verification failed. Detailed output is private.'
+            exit 1
+          fi
+
+      - name: Save private account record
+        if: inputs.task == 'account-update'
+        env:
+          ACCOUNT_ASSET: ${{ vars.ACCOUNT_ASSET }}
+          JRC_DATA_DIR: ${{ runner.temp }}/private-state
+          JRC_STATE_REPOSITORY: ${{ vars.STATE_REPOSITORY }}
+          JRC_STATE_TOKEN: ${{ secrets.STATE_TOKEN }}
+          JRC_STATE_KEY: ${{ secrets.STATE_KEY }}
+          JRC_MODE: inspection
+        run: |
+          if bash application/scripts/github_job.sh account-update > "$RUNNER_TEMP/private-job.log" 2>&1; then
+            echo 'Private account record saved. No browser, mail read, model call or submission.'
+          else
+            echo 'Private account update failed. Detailed output is private.'
             exit 1
           fi
