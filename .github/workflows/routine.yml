@@ -4,9 +4,9 @@ on:
   workflow_dispatch:
     inputs:
       task:
-        description: State maintenance (no browser or submission)
+        description: State and access checks (no browser or submission)
         type: choice
-        options: [preflight, sync, transfer, state-check, update]
+        options: [preflight, sync, transfer, state-check, update, mail-check]
         default: preflight
         required: true
 
@@ -127,5 +127,17 @@ jobs:
             echo 'Private human update saved. No browser, model call or submission.'
           else
             echo 'Private update failed. Detailed output is private.'
+            exit 1
+          fi
+
+      - name: Verify readonly mail access
+        if: inputs.task == 'mail-check'
+        env:
+          JRC_GMAIL_ACCESS: ${{ secrets.GMAIL_ACCESS }}
+        run: |
+          if bash application/scripts/github_job.sh mail-check > "$RUNNER_TEMP/private-job.log" 2>&1; then
+            echo 'Readonly mail access verified. No message content read.'
+          else
+            echo 'Readonly mail verification failed. Detailed output is private.'
             exit 1
           fi
